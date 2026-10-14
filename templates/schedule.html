@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Smart schedule | Smart Task Manager{% endblock %}
+{% block content %}
+<section class="page-heading"><div><p class="eyebrow">ALGORITHM OUTPUT</p><h1>Smart schedule</h1><p class="muted">Prerequisites are placed first; among available tasks, higher priority and earlier deadlines are preferred.</p></div><a class="button" href="{{ url_for('index') }}">Back to dashboard</a></section>
+<section class="panel">
+{% if error %}<div class="alert error">{{ error }}</div>
+{% elif scheduled %}
+  <ol class="schedule-list">{% for task in scheduled %}<li><div class="schedule-number">{{ loop.index }}</div><div class="schedule-body"><strong>{{ task.title }}</strong><p class="muted">{{ task.deadline|pretty_deadline }} · Priority {{ task.priority }} · {{ task.estimated_minutes }} min</p>{% if task.dependencies %}<span class="small">Prerequisite ID(s): {{ task.dependencies }}</span>{% endif %}</div><span class="status">{{ task.status }}</span></li>{% endfor %}</ol>
+  <p class="help">This is a recommended order, not a guarantee of a globally optimal timetable. Tasks marked completed are excluded from this view.</p>
+{% else %}<div class="empty"><h3>No active tasks</h3><p>Create a pending or in-progress task to generate a schedule.</p></div>{% endif %}
+</section>
+<section class="panel"><h2>How the algorithm works</h2><ol><li>Build a directed graph from prerequisite tasks to dependent tasks.</li><li>Use Kahn's topological-sort algorithm to find tasks whose prerequisites are satisfied.</li><li>Put eligible tasks into a heap ordered by priority, deadline, and task ID.</li><li>Repeatedly choose the highest-ranked eligible task and release its dependent tasks.</li><li>If not all tasks can be scheduled, report a dependency cycle.</li></ol><p><strong>Complexity:</strong> O((V + E) log V), where V is the number of tasks and E is the number of dependency links.</p></section>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | Smart Task Manager{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <div class="eyebrow hero-eyebrow"><span class="live-dot"></span> YOUR PRODUCTIVITY SPACE</div>
+    <h1>Make every deadline<br><span>feel manageable.</span></h1>
+    <p>One clear view of your tasks, priorities, and progress. Plan smarter and keep momentum.</p>
+    <div class="hero-actions">
+      <a class="button primary hero-button" href="{{ url_for('create_task') }}"><span class="button-icon">＋</span> Create a task</a>
+      <a class="button ghost-button" href="{{ url_for('schedule') }}">View smart schedule <span>↗</span></a>
+    </div>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+    <div class="hero-glow"></div>
+    <div class="floating-card card-check"><span class="floating-icon">✓</span><div><strong>Keep moving</strong><small>Small steps add up</small></div></div>
+    <div class="hero-progress"><div class="progress-ring"><span>{{ counts.completion_rate }}<small>%</small></span></div><div><strong>Progress so far</strong><small>{{ counts.completed }} of {{ counts.total }} tasks completed</small></div></div>
+    <div class="floating-card card-spark"><span>✦</span> Focus on what matters</div>
+  </div>
+</section>
+
+<section class="stats-grid">
+  <article class="stat stat-total"><div class="stat-top"><span class="stat-icon">▦</span><span class="stat-trend">ALL WORK</span></div><span class="stat-label">Total tasks</span><strong>{{ counts.total }}</strong><div class="stat-foot">Tasks in your workspace</div></article>
+  <article class="stat stat-done"><div class="stat-top"><span class="stat-icon">✓</span><span class="mini-pill">Done</span></div><span class="stat-label">Completed</span><strong>{{ counts.completed }}</strong><div class="stat-foot">Great work — keep it up</div></article>
+  <article class="stat stat-progress"><div class="stat-top"><span class="stat-icon">◷</span><span class="mini-pill">Active</span></div><span class="stat-label">In progress</span><strong>{{ counts.in_progress }}</strong><div class="stat-foot">Currently on your plate</div></article>
+  <article class="stat stat-pending"><div class="stat-top"><span class="stat-icon">◌</span><span class="mini-pill">Next up</span></div><span class="stat-label">Pending</span><strong>{{ counts.pending }}</strong><div class="stat-foot">Ready when you are</div></article>
+  <article class="stat stat-overdue"><div class="stat-top"><span class="stat-icon">!</span><span class="mini-pill">Attention</span></div><span class="stat-label">Overdue</span><strong>{{ counts.overdue }}</strong><div class="stat-foot">Tasks past their deadline</div></article>
+</section>
+
+<section class="charts-grid">
+  <article class="panel chart-panel">
+    <div class="panel-heading">
+      <div><span class="section-kicker">AT A GLANCE</span><h2>Task status</h2><p class="panel-subtitle">How your workload is distributed</p></div>
+      <span class="chart-badge">Live overview</span>
+    </div>
+    <div class="status-chart-layout">
+      <div class="doughnut-wrap"><canvas id="statusChart" aria-label="Doughnut chart of task status" role="img"></canvas><div class="doughnut-center"><strong>{{ counts.total }}</strong><span>Total tasks</span></div></div>
+      <div class="chart-legend">
+        <div class="legend-item"><span class="legend-dot dot-completed"></span><span>Completed</span><strong>{{ counts.completed }}</strong></div>
+        <div class="legend-item"><span class="legend-dot dot-progress"></span><span>In progress</span><strong>{{ counts.in_progress }}</strong></div>
+        <div class="legend-item"><span class="legend-dot dot-pending"></span><span>Pending</span><strong>{{ counts.pending }}</strong></div>
+        <div class="legend-note"><span class="legend-dot dot-overdue"></span><span>{{ counts.overdue }} overdue task{{ '' if counts.overdue == 1 else 's' }} need attention</span></div>
+      </div>
+    </div>
+  </article>
+  <article class="panel chart-panel priority-panel">
+    <div class="panel-heading">
+      <div><span class="section-kicker">PLAN YOUR FOCUS</span><h2>Priority breakdown</h2><p class="panel-subtitle">See where your attention is needed</p></div>
+      <span class="chart-badge">Levels 1–5</span>
+    </div>
+    <div class="priority-chart-wrap"><canvas id="priorityChart" aria-label="Bar chart of tasks by priority" role="img"></canvas></div>
+    <div class="priority-foot"><span><i class="priority-key key-low"></i>Lower priority</span><span><i class="priority-key key-high"></i>Higher priority</span></div>
+  </article>
+</section>
+
+<section class="panel task-panel">
+  <div class="panel-heading task-panel-heading">
+    <div><span class="section-kicker">YOUR WORKSPACE</span><h2>Task list</h2><p class="panel-subtitle">Keep the next step visible and actionable.</p></div>
+    <form class="filters" method="get">
+      <label class="search-box"><span>⌕</span><input type="search" name="q" placeholder="Search tasks..." value="{{ q }}"></label>
+      <select name="status" aria-label="Filter by status">
+        <option value="">All statuses</option>
+        {% for item in ['Pending', 'In Progress', 'Completed'] %}<option value="{{ item }}" {% if status_filter == item %}selected{% endif %}>{{ item }}</option>{% endfor %}
+      </select>
+      <button class="button filter-button" type="submit">Filter</button>
+    </form>
+  </div>
+  {% if tasks %}
+  <div class="table-wrap"><table><thead><tr><th>Task details</th><th>Priority</th><th>Deadline</th><th>Estimate</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+  {% for task in tasks %}
+    <tr class="{% if is_overdue(task) %}overdue-row{% endif %}">
+      <td><div class="task-title-cell"><span class="task-check {% if task.status == 'Completed' %}checked{% endif %}">{% if task.status == 'Completed' %}✓{% else %}•{% endif %}</span><div><strong>{{ task.title }}</strong><div class="small muted">{{ task.description or 'No description added' }}</div>
+      {% if task.dependencies %}<div class="small dependency-label">↳ Depends on #{{ task.dependencies }}</div>{% endif %}</div></div></td>
+      <td><span class="priority p{{ task.priority }}"><span class="priority-dot"></span>{{ task.priority|priority_name }}</span></td>
+      <td><span class="deadline-text">{{ task.deadline|pretty_deadline }}</span>{% if is_overdue(task) %}<div class="small danger-text">Past deadline</div>{% endif %}</td>
+      <td><span class="estimate-chip">◷ {{ task.estimated_minutes }} min</span></td>
+      <td><span class="status status-{{ task.status|lower|replace(' ', '-') }}">{{ task.status }}</span></td>
+      <td><div class="actions"><a class="icon-action" title="Edit task" aria-label="Edit task" href="{{ url_for('edit_task', task_id=task.id) }}">✎</a>
+      <form method="post" action="{{ url_for('toggle_task', task_id=task.id) }}"><button class="icon-action" type="submit" title="{% if task.status == 'Completed' %}Reopen task{% else %}Mark complete{% endif %}" aria-label="{% if task.status == 'Completed' %}Reopen task{% else %}Mark complete{% endif %}">{% if task.status == 'Completed' %}↶{% else %}✓{% endif %}</button></form>
+      <form method="post" action="{{ url_for('remove_task', task_id=task.id) }}" onsubmit="return confirm('Delete this task?')"><button class="icon-action delete-action" type="submit" title="Delete task" aria-label="Delete task">×</button></form></div></td>
+    </tr>
+  {% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="empty"><div class="empty-illustration">✓</div><h3>No tasks found</h3><p>Create a task or adjust your search filters to see your work here.</p><a class="button primary" href="{{ url_for('create_task') }}">Create your first task</a></div>{% endif %}
+</section>
+
+<script id="chart-data" type="application/json">{{ {"status": status_chart, "priority": priority_chart}|tojson }}</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+{% endblock %}
